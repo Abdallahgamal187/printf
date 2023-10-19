@@ -1,135 +1,188 @@
 #include "main.h"
-#include <stdio.h>
-#include <stdlib.h>
-/**
- * print_char - writes the character c to stdout
- * @c: The character to be printed
- *
- * Return: 1.
- */
-int print_char(va_list c)
-{
-	unsigned char my_char;
 
-	my_char = va_arg(c, int);
-	_putchar(my_char);
-	return (1);
+/************************* PRINT CHAR *************************/
+
+/**
+ * print_char - Prints a char
+ * @types: List a of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: Width
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Number of chars printed
+ */
+int print_char(va_list types, char buffer[],
+	int flags, int width, int precision, int size)
+{
+	char c = va_arg(types, int);
+
+	return (handle_write_char(c, buffer, flags, width, precision, size));
 }
+/************************* PRINT A STRING *************************/
 /**
- * print_string - writes the character c to stdout
- * @s:string to be print
- *
- * Return: 1.
+ * print_string - Prints a string
+ * @types: List a of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width.
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Number of chars printed
  */
-int print_string(va_list s)
+int print_string(va_list types, char buffer[],
+	int flags, int width, int precision, int size)
 {
-	char *my_string;
-	int  i = 0;
+	int length = 0, i;
+	char *str = va_arg(types, char *);
 
-	my_string = va_arg(s, char *);
-	if (my_string == NULL)
-		my_string = "(null)";
-	while (my_string[i])
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
+	if (str == NULL)
 	{
-		_putchar(my_string[i]);
-		i++;
+		str = "(null)";
+		if (precision >= 6)
+			str = "      ";
 	}
-	return (i);
-}
-/**
- * print_percentage - prints percent sign
- *
- * Return: 1.
- */
-int print_percentage(void)
-{
-	_putchar('%');
-	return (1);
-}
 
-/**
-* print_int - function that prints an integer
-* @i: integer to print
-* Description: prints a digit using _putchar
-* Return: size the output text
-*/
-int print_int(va_list i)
-{
-	int len, powten, j, digit, n, count = 0, num;
+	while (str[length] != '\0')
+		length++;
 
-	n = va_arg(i, int);
-	if (n != 0)
+	if (precision >= 0 && precision < length)
+		length = precision;
+
+	if (width > length)
 	{
-		if (n < 0)
+		if (flags & F_MINUS)
 		{
-			_putchar('-');
+			write(1, &str[0], length);
+			for (i = width - length; i > 0; i--)
+				write(1, " ", 1);
+			return (width);
+		}
+		else
+		{
+			for (i = width - length; i > 0; i--)
+				write(1, " ", 1);
+			write(1, &str[0], length);
+			return (width);
+		}
+	}
+
+	return (write(1, str, length));
+}
+/************************* PRINT PERCENT SIGN *************************/
+/**
+ * print_percent - Prints a percent sign
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width.
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Number of chars printed
+ */
+int print_percent(va_list types, char buffer[],
+	int flags, int width, int precision, int size)
+{
+	UNUSED(types);
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
+	return (write(1, "%%", 1));
+}
+
+/************************* PRINT INT *************************/
+/**
+ * print_int - Print int
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width.
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Number of chars printed
+ */
+int print_int(va_list types, char buffer[],
+	int flags, int width, int precision, int size)
+{
+	int i = BUFF_SIZE - 2;
+	int is_negative = 0;
+	long int n = va_arg(types, long int);
+	unsigned long int num;
+
+	n = convert_size_number(n, size);
+
+	if (n == 0)
+		buffer[i--] = '0';
+
+	buffer[BUFF_SIZE - 1] = '\0';
+	num = (unsigned long int)n;
+
+	if (n < 0)
+	{
+		num = (unsigned long int)((-1) * n);
+		is_negative = 1;
+	}
+
+	while (num > 0)
+	{
+		buffer[i--] = (num % 10) + '0';
+		num /= 10;
+	}
+
+	i++;
+
+	return (write_number(is_negative, i, buffer, flags, width, precision, size));
+}
+
+/************************* PRINT BINARY *************************/
+/**
+ * print_binary - Prints an unsigned number
+ * @types: Lista of arguments
+ * @buffer: Buffer array to handle print
+ * @flags:  Calculates active flags
+ * @width: get width.
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: Numbers of char printed.
+ */
+int print_binary(va_list types, char buffer[],
+	int flags, int width, int precision, int size)
+{
+	unsigned int n, m, i, sum;
+	unsigned int a[32];
+	int count;
+
+	UNUSED(buffer);
+	UNUSED(flags);
+	UNUSED(width);
+	UNUSED(precision);
+	UNUSED(size);
+
+	n = va_arg(types, unsigned int);
+	m = 2147483648; /* (2 ^ 31) */
+	a[0] = n / m;
+	for (i = 1; i < 32; i++)
+	{
+		m /= 2;
+		a[i] = (n / m) % 2;
+	}
+	for (i = 0, sum = 0, count = 0; i < 32; i++)
+	{
+		sum += a[i];
+		if (sum || i == 31)
+		{
+			char z = '0' + a[i];
+
+			write(1, &z, 1);
 			count++;
 		}
-		num = n;
-		len = 0;
-		while (num != 0)
-		{
-			num /= 10;
-			len++;
-		}
-		powten = 1;
-		for (j = 1; j <= len - 1; j++)
-			powten *= 10;
-		for (j = 1; j <= len; j++)
-		{
-			digit = n / powten;
-			if (n < 0)
-				_putchar((digit * -1) + 48);
-			else
-				_putchar(digit + '0');
-			count++;
-			n -= digit * powten;
-			powten /= 10;
-		}
-	}
-	else
-	{
-		_putchar('0');
-		return (1);
-	}
-	return (count);
-}
-/**
-* print_bin - convert to binary
-* @b: number in decinal
-* Return: number of chars printed
-*/
-int print_bin(va_list b)
-{
-	unsigned int len, powten, j, digit, n, num;
-	int count = 0;
-
-	n = va_arg(b, unsigned int);
-	if (n != 0)
-	{
-		num = n;
-		len = 0;
-		while (num != 0)
-		{
-			num /= 2;
-			len++;
-		}
-		powten = 1;
-		for (j = 1; j <= len - 1; j++)
-			powten *= 2;
-		for (j = 1; j <= len; j++)
-		{
-			digit = n / powten;
-			_putchar(digit + '0');
-			count++;
-			n -= digit * powten;
-			powten /= 2;
-		}
-	}
-	else
-	{
-		_putchar('0');
-		return (1);
 	}
 	return (count);
 }
